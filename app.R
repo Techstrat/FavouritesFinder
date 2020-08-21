@@ -62,7 +62,8 @@ server <- function(input, output) {
             retailerID <- all_retailers[all_retailers$retailer == retailerName,]$retailer_id
             Sys.sleep(2)  #delay to avoid getting blocked
             products <- retailer_products(retailerID, product = regExpression,limit=1)  #trundler function
-             if (nrow(products)==0) { #no products retrieved - add blank row
+            
+            if (nrow(products)==0) { #no products retrieved - add blank row
                 products <- tibble(product_id=numeric(),product=character(),sku=character())
                 products <- products %>% add_row(product = "No products",sku = "Empty",product_id = 0)
             }
@@ -70,6 +71,7 @@ server <- function(input, output) {
                 products <- distinct(products, sku, .keep_all = TRUE) #remove duplicate product listing
                 drops <- c("model","brand")
                 products <- products[,!(names(products) %in% drops)]
+                products <- products[complete.cases(products), ]
                 products <- head(products,5)  #limit to 5 products per retailer
             }
             products$retailerID = retailerID
