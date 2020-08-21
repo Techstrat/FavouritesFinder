@@ -3,6 +3,7 @@ library(shiny)
 library(trundler)
 library(tibble)
 library(dplyr)
+library(DT)
 
 set_api_key("##############")
 all_retailers <- retailer()     #trundler function    
@@ -20,6 +21,21 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
+            tags$style(type="text/css", "
+           #loadmessage {
+             position: fixed;
+             top: 0px;
+             left: 0px;
+             width: 100%;
+             padding: 5px 0px 5px 0px;
+             text-align: center;
+             font-weight: bold;
+             font-size: 100%;
+             color: #ffffff;
+             background-color: #4b4ed1;
+             z-index: 105;
+           }
+        "),           
             h3("Select retailers"),
             selectizeInput(
                 "retailer_list","Retailer List",choices = retailList,
@@ -33,15 +49,17 @@ ui <- fluidPage(
               textInput("string2","Key 2",value = ""),
               textInput("string3","Key 3",value = ""),
             em("Give at least 1 and up to 3 key text values that should be in the name of your favourites."),  
-            em("The more specific the better - results per retailer will be limited to 5."),  
+            em("The more specific the better faster the results"),# - results per retailer will be limited to 5."),  
             
-            submitButton("Find")
-        ),
+            submitButton("Find"),
+            conditionalPanel(condition="$('html').hasClass('shiny-busy')",
+                             tags$div("Loading prices...Depending on how specific your search is, this might take a few minutes.",id="loadmessage"))
+            ),
 
         # Show a plot of the generated distribution
         mainPanel(
-        h3("Latest prices"),
-        tableOutput("priceTable"),
+        h3("Latest prices in ZAR"),
+        dataTableOutput("priceTable"),
         textOutput("Feedback")
         )
     )
@@ -72,7 +90,7 @@ server <- function(input, output) {
                 drops <- c("model","brand")
                 products <- products[,!(names(products) %in% drops)]
                 products <- products[complete.cases(products), ]
-                products <- head(products,5)  #limit to 5 products per retailer
+     #           products <- head(products,5)  #limit to 5 products per retailer
             }
             products$retailerID = retailerID
             products$retailerName = retailerName  
@@ -130,8 +148,7 @@ server <- function(input, output) {
         ifelse(checkKeys(),"","Select at least one retailer and enter at least one key value before selecting Find")
     })
     
-#Output
-    output$priceTable <- renderTable({
+    prices <- reactive({
         if (checkKeys()) {
             latestPrices(retailer_list(),regExpression())
         }
@@ -139,6 +156,20 @@ server <- function(input, output) {
             tibble(Retailer=character(),Product=character(),
                    Date=character(),Price=numeric(),Discounted=numeric())
         }
+    })
+    
+#Output
+    output$priceTable <- DT::renderDataTable({
+        DT::datatable(prices(),rownames=FALSE, 
+                      options = list(pageLength = 25,
+                                     rowCallback = JS(
+            "function(row, data) {",
+            "var num = data[3].toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');",
+            "$('td:eq(3)', row).html(num);",
+            "var num = data[4].toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');",
+            "$('td:eq(4)', row).html(num);",
+            "}")
+            ))
     })
 
     output$Feedback <- renderText({
