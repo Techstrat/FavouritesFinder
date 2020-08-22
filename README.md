@@ -16,3 +16,4 @@ Other package used are
 * shiny
 * tibble
 * dplyr
+* DT
