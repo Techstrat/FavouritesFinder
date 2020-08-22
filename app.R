@@ -5,7 +5,7 @@ library(tibble)
 library(dplyr)
 library(DT)
 
-set_api_key("##############")
+set_api_key("#############")
 all_retailers <- retailer()     #trundler function    
 retailList <- all_retailers %>% 
     filter(currency=="ZAR")  %>% 
@@ -49,11 +49,11 @@ ui <- fluidPage(
               textInput("string2","Key 2",value = ""),
               textInput("string3","Key 3",value = ""),
             em("Give at least 1 and up to 3 key text values that should be in the name of your favourites."),  
-            em("The more specific the better faster the results"),# - results per retailer will be limited to 5."),  
+            em("The more specific the keys, the faster you'll get results"),# - results per retailer will be limited to 5."),  
             
             submitButton("Find"),
             conditionalPanel(condition="$('html').hasClass('shiny-busy')",
-                             tags$div("Loading prices...Depending on how specific your search is, this might take a few minutes.",id="loadmessage"))
+                             tags$div("Searching for and loading products with their prices...Depending on how specific your search is, this might take a few minutes.",id="loadmessage"))
             ),
 
         # Show a plot of the generated distribution
@@ -123,7 +123,8 @@ server <- function(input, output) {
                 promotion <- last_price$price - last_price$price_effective
     
                 price_row <- tibble_row(Retailer = products[i,]$retailerName,
-                                        Product = products[i,]$product, Date = date, Price = last_price$price_effective,
+                                        Product = products[i,]$product, Date = date, 
+                                        Price = last_price$price_effective,
                                         Discounted = promotion)
             }
             latest_prices <- rbind(latest_prices,price_row)
@@ -161,14 +162,20 @@ server <- function(input, output) {
 #Output
     output$priceTable <- DT::renderDataTable({
         DT::datatable(prices(),rownames=FALSE, 
-                      options = list(pageLength = 25,
-                                     rowCallback = JS(
+                      extensions = c('Buttons'),
+                      options = list(order = list(3, 'asc'),
+                                     dom = 'Bfrtip',
+                                     buttons = c('pageLength','copy'),
+                                     pageLength = 25,
+                                     lengthChange = TRUE,
+                                rowCallback = JS(
             "function(row, data) {",
-            "var num = data[3].toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');",
+            "var num = 'R'+data[3].toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');",
             "$('td:eq(3)', row).html(num);",
-            "var num = data[4].toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');",
+            "var num = 'R'+data[4].toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');",
             "$('td:eq(4)', row).html(num);",
-            "}")
+            "}"
+                                    )
             ))
     })
 
